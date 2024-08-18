@@ -20,7 +20,9 @@ module Fastlane
     class AnalyzeCommitsAction < Action
       def self.get_last_tag(params)
         # Try to find the tag
-        command = "git describe --tags --match=#{params[:match]}"
+        command = "git describe --tags --match=#{params[:match]} --exclude=#{params[:exclude]}"
+        UI.message("exclude param:#{params[:exclude]}")
+        UI.message("command last is: #{command}")
         Actions.sh(command, log: params[:debug])
       rescue
         UI.message("Tag was not found for match pattern - #{params[:match]}")
@@ -45,7 +47,7 @@ module Fastlane
         # command to get first commit
         git_command = "git rev-list --max-parents=0 HEAD"
 
-        tag = get_last_tag(match: params[:match], debug: params[:debug])
+        tag = get_last_tag(match: params[:match], exclude: params[:exclude], debug: params[:debug])
 
         # if tag doesn't exist it get's first commit or fallback tag (v*.*.*)
         if tag.empty?
@@ -64,7 +66,7 @@ module Fastlane
           unless params[:prevent_tag_fallback]
             # neither matched tag and first hash could be used - as fallback we try vX.Y.Z
             UI.message("It couldn't match tag for #{params[:match]} and couldn't use first commit. Check if tag vX.Y.Z can be taken as a begining of next release")
-            tag = get_last_tag(match: "v*", debug: params[:debug])
+            tag = get_last_tag(match: "v*", exclude: params[:exclude],debug: params[:debug])
           end
 
           # even fallback tag doesn't work
@@ -278,6 +280,13 @@ module Fastlane
             description: "Match parameter of git describe. See man page of git describe for more info",
             verify_block: proc do |value|
               UI.user_error!("No match for analyze_commits action given, pass using `match: 'expr'`") unless value && !value.empty?
+            end
+          ),
+          FastlaneCore::ConfigItem.new(
+            key: :exclude,
+            description: "exclude parameter of git describe. See man page of git describe for more info",
+            verify_block: proc do |value|
+              UI.user_error!("No exclude for analyze_commits action given, pass using `exclude: 'expr'`") unless value && !value.empty?
             end
           ),
           FastlaneCore::ConfigItem.new(
